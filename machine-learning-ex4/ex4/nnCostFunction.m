@@ -61,65 +61,43 @@ Theta2_grad = zeros(size(Theta2));
 %               the regularization separately and then add them to Theta1_grad
 %               and Theta2_grad from Part 2.
 %
+c =num_labels;
+y_b = zeros(m, c);
 
-yb = zeros(m,num_labels);
-for i=1:m
- yb(i,y(i)) = 1;
-end
-X1 = [ones(m,1), X];
-%So I think I can change this in to the y==c model
-
-z1 = X1 * Theta1';
-a1 = sigmoid(z1);
-a11 = [ones(m,1), a1];
-
-z2 = a11 * Theta2';
-a2 = sigmoid(z2);
-
-% J = 1/m(-y*log(h*x) - (1-y)log(1-h*x)) + (lambda/2m)(theta1^2+ theta2^2)
-J = sum(sum( -yb.*log(a2) - (1-yb).*log(1-a2) ))/m;
-
-J = J + (sum(sum(Theta1(:,2:end).^2)) + sum(sum(Theta2(:,2:end).^2)) )* lambda/(2*m);
-
-% -------------------------------------------------------------
-% Compute gradients using back propagation
-
-
-for t = 1:m
-    a_1 = X(t,:)';
-    a_1 = [1; a_1];
-
-    z_2 = Theta1 * a_1;
-
-    a_2 = sigmoid(z_2);
-    a_2 = [1; a_2];
-
-    z_3 = Theta2 * a_2;
-
-    a_3 = sigmoid(z_3);
-
-    % Error
-    yt = yb(t,:)';
-    delta_3 = a_3 - yt;
-
-    % Propagate error backwards
-    delta_2 = (Theta2' * delta_3) .* sigmoidGradient([1; z_2]);
-    delta_2 = delta_2(2:end);
-
-    dt2 = delta_3 * a_2';
-    dt1 = delta_2 * a_1';
-
-    Theta2_grad = Theta2_grad + dt2;
-    Theta1_grad = Theta1_grad + dt1;
+for i = 1:c;
+  y_b(:,i) = (y==i);
 end
 
+A_0 = [ones(m,1),X];
+Z_1 = A_0 * Theta1';
+A_1 = sigmoid(Z_1);
+A_11 = [ones(m,1),A_1];
+Z_2 = A_11 * Theta2';
+A_2 = sigmoid(Z_2);
 
-Theta1_grad = (1/m) * Theta1_grad;
-Theta2_grad = (1/m) * Theta2_grad ;
+J = -1/m * sum(sum(y_b.* log(A_2)+(1-y_b).*log(1-A_2)));
 
-% Add regularization terms
-Theta1_grad(:,2:end) = Theta1_grad(:,2:end) + (lambda/m) * Theta1(:,2:end);
-Theta2_grad(:,2:end) = Theta2_grad(:,2:end) + (lambda/m) * Theta2(:,2:end);
+% regularization_part:
+
+J += lambda/(2*m)*(sum(sum(Theta1(:,2:end).^2))+sum(sum(Theta2(:,2:end).^2)));
+
+% backpropagation:
+
+delta_2 = (A_2-y_b);
+delta_1_inner=delta_2 * Theta2;
+delta_1 = delta_1_inner .* sigmoidGradient([ones(m,1),Z_1]);
+delta_1 = delta_1(:,2:end);
+
+Theta2_grad_inner = 1/m*(delta_2' * A_11);
+Theta1_grad_inner = 1/m*(delta_1' * A_0);
+
+Theta2_grad += Theta2_grad_inner +lambda/m* Theta2;
+Theta1_grad += Theta1_grad_inner+lambda/m* Theta1;
+
+Theta2_grad(:,1)= Theta2_grad_inner(:,1);
+Theta1_grad(:,1)= Theta1_grad_inner(:,1);
+
+
 
 
 
